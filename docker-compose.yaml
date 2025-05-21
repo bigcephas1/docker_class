@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo:6
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - todo_network
+
+  server:
+    build: ./server
+    container_name: server
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - mongo
+    networks:
+      - todo_network
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+
+  client:
+    build: ./client
+    container_name: client
+    ports:
+      - "3000:80"
+    depends_on:
+      - server
+    networks:
+      - todo_network
+
+volumes:
+  mongo_data:
+
+networks:
+  todo_network:
+    driver: bridge
