@@ -1,35 +1,52 @@
 pipeline {
     agent any
+    environment {
+        IMAGE_PREFIX = 'peterukpabi4/todo_app'
+    }
     stages {
-        stage('Requirements Gathering') {
+        stage('Checkout Code') {
             steps {
-                echo '✔ Gathering user and business requirements...'
+                git url: 'https://github.com/bigcephas1/docker_class.git', branch: 'main'
             }
         }
-        stage('Design') {
+        stage('Build Backend Docker Image') {
             steps {
-                echo '✔ Designing architecture and components...'
+                script {
+                    dockerImage = docker.build("${IMAGE_PREFIX}-server", './server')
+                }
             }
         }
-        stage('Implementation') {
+        stage('Build Frontend Docker Image') {
             steps {
-                echo '✔ Coding in progress...'
+                script {
+                    dockerImage = docker.build("${IMAGE_PREFIX}-client", './client')
+                }
             }
         }
-        stage('Testing') {
+        stage('Login to DockerHub') {
             steps {
-                echo '✔ Running tests (unit, integration, etc)...'
+                withCredentials([usernamePassword(credentialsId: 'DOCKER_CRED', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                }
             }
         }
-        stage('Deployment') {
+        stage('Push Backend Image') {
             steps {
-                echo '✔ Deploying application to staging/production...'
+                sh "docker tag ${IMAGE_PREFIX}-server ${IMAGE_PREFIX}-server:latest"
+                sh "docker push ${IMAGE_PREFIX}-server:latest"
             }
         }
-        stage('Maintenance') {
+        stage('Push Frontend Image') {
             steps {
-                echo '✔ Monitoring and applying bug fixes...'
+                sh "docker tag ${IMAGE_PREFIX}-client ${IMAGE_PREFIX}-frontend:latest"
+                sh "docker push ${IMAGE_PREFIX}-client:latest"
             }
         }
     }
+    post {
+        always {
+            sh 'docker logout'
+        }
+    }
 }
+
